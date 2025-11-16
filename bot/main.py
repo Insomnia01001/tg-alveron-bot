@@ -1,5 +1,6 @@
-import asyncio
 import logging
+import os
+from fastapi import FastAPI, Request
 from aiogram import Bot, Dispatcher, types
 from aiogram.fsm.storage.memory import MemoryStorage
 from aiogram.fsm.state import State, StatesGroup
@@ -7,25 +8,32 @@ from aiogram.fsm.context import FSMContext
 from aiogram.filters import Command
 import psycopg2
 from psycopg2.extras import RealDictCursor
-import os
 from dotenv import load_dotenv
+
 load_dotenv()
 
 API_TOKEN = os.getenv("API_TOKEN")
+WEBHOOK_PATH = "/webhook"
+WEBHOOK_URL = f"https://happy-heart.up.railway.app{WEBHOOK_PATH}"
 
+# Aiogram bot va dispatcher
+bot = Bot(token=API_TOKEN)
+storage = MemoryStorage()
+dp = Dispatcher(storage=storage)
+
+# FastAPI app
+app = FastAPI()
+
+# DB konfiguratsiyasi
 DB_CONFIG = {
     "host": os.getenv("DB_HOST"),
-    "port": int(os.getenv("DB_PORT", 5432)),  # default 5432
+    "port": int(os.getenv("DB_PORT", 5432)),
     "dbname": os.getenv("DB_NAME"),
     "user": os.getenv("DB_USER"),
     "password": os.getenv("DB_PASSWORD")
 }
 
-bot = Bot(token=API_TOKEN)
-storage = MemoryStorage()
-dp = Dispatcher(storage=storage)
-
-logging.basicConfig(level=logging.INFO)
+# DB bilan ishlash funksiyalari
 def connect_db():
     return psycopg2.connect(
         host=DB_CONFIG["host"],
@@ -64,10 +72,14 @@ def delete_by_id(msg_id):
     conn.close()
     return deleted
 
+# States
 class DeleteClient(StatesGroup):
     number = State()
 
 user_pages = {}
+
+# Logging
+logging.basicConfig(level=logging.INFO)
 
 # START COMMAND
 @dp.message(Command("start"))
@@ -95,12 +107,9 @@ async def show_clients(message: types.Message, state: FSMContext):
 
         buttons = []
         if total > 5:
-            buttons.append([
-                types.InlineKeyboardButton(text="➡️ Keyingi", callback_data="next_page")
-            ])
+            buttons.append([types.InlineKeyboardButton(text="➡️ Keyingi", callback_data="next_page")])
 
         kb = types.InlineKeyboardMarkup(inline_keyboard=buttons if buttons else [])
-
         await message.answer(text, reply_markup=kb)
     else:
         await message.answer("Foydalanuvchilar topilmadi.")
@@ -173,12 +182,24 @@ async def prev_page(callback: types.CallbackQuery):
     kb = create_pagination_keyboard(offset, total)
     await callback.message.edit_text(text, reply_markup=kb)
 
-# START BOT
-async def main():
-    try:
-        await dp.start_polling(bot)
-    finally:
-        await bot.session.close()
+# TELEGRAM WEBHOOK ENDPOINT
+@app.post(WEBHOOK_PATH)
+async def telegram_webhook(req: Request):
+    update = types.Update(**await req.json())
+    await dp.process_update(update)
+    return {"ok": True}
 
+# STARTUP & SHUTDOWN EVENTS
+@app.on_event("startup")
+async def on_startup():
+    await bot.set_webhook(WEBHOOK_URL)
+
+@app.on_event("shutdown")
+async def on_shutdown():
+    await bot.delete_webhook()
+
+# RUN Uvicorn
 if __name__ == "__main__":
-    asyncio.run(main())
+    import uvicorn
+    uvicorn.run("main:app", host="0.0.0.0", port=int(os.environ.get("PORT", 8000)))
+    
