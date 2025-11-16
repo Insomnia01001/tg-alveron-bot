@@ -16,6 +16,7 @@ API_TOKEN = os.getenv("API_TOKEN")
 WEBHOOK_PATH = "/webhook"
 WEBHOOK_URL = f"https://happy-heart.up.railway.app{WEBHOOK_PATH}"
 
+
 # Aiogram bot va dispatcher
 bot = Bot(token=API_TOKEN)
 storage = MemoryStorage()
