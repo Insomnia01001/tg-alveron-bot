@@ -88,6 +88,7 @@ async def telegram_webhook(req: Request):
 # STARTUP & SHUTDOWN EVENTS
 @app.on_event("startup")
 async def on_startup():
+    print("Webhook URL:", WEBHOOK_URL)
     await bot.set_webhook(WEBHOOK_URL)
 
 @app.on_event("shutdown")
@@ -208,4 +209,4 @@ async def prev_page(callback: types.CallbackQuery):
 # RUN Uvicorn
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run("bot.main:app", host="0.0.0.0", port=int(os.environ.get("PORT", 8080)))
+    uvicorn.run("bot.main:app", host="0.0.0.0", port=int(os.environ.get("PORT", 8000)))
