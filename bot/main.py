@@ -203,4 +203,3 @@ async def on_shutdown():
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run("bot.main:app", host="0.0.0.0", port=int(os.environ.get("PORT", 8000)))
-
