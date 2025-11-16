@@ -9,6 +9,9 @@ from aiogram.filters import Command
 import psycopg2
 from psycopg2.extras import RealDictCursor
 from dotenv import load_dotenv
+import os
+print(os.getenv("RAILWAY_APP_URL"))
+print(os.getenv("API_TOKEN"))
 
 load_dotenv()
 
@@ -75,6 +78,21 @@ def delete_by_id(msg_id):
     deleted = cur.rowcount > 0
     conn.close()
     return deleted
+# TELEGRAM WEBHOOK ENDPOINT
+@app.post(WEBHOOK_PATH)
+async def telegram_webhook(req: Request):
+    update = types.Update(**await req.json())
+    await dp.process_update(update)
+    return {"ok": True}
+
+# STARTUP & SHUTDOWN EVENTS
+@app.on_event("startup")
+async def on_startup():
+    await bot.set_webhook(WEBHOOK_URL)
+
+@app.on_event("shutdown")
+async def on_shutdown():
+    await bot.delete_webhook()
 
 # States
 class DeleteClient(StatesGroup):
@@ -186,23 +204,8 @@ async def prev_page(callback: types.CallbackQuery):
     kb = create_pagination_keyboard(offset, total)
     await callback.message.edit_text(text, reply_markup=kb)
 
-# TELEGRAM WEBHOOK ENDPOINT
-@app.post(WEBHOOK_PATH)
-async def telegram_webhook(req: Request):
-    update = types.Update(**await req.json())
-    await dp.process_update(update)
-    return {"ok": True}
-
-# STARTUP & SHUTDOWN EVENTS
-@app.on_event("startup")
-async def on_startup():
-    await bot.set_webhook(WEBHOOK_URL)
-
-@app.on_event("shutdown")
-async def on_shutdown():
-    await bot.delete_webhook()
 
 # RUN Uvicorn
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run("bot.main:app", host="0.0.0.0", port=int(os.environ.get("PORT", 8000)))
+    uvicorn.run("bot.main:app", host="0.0.0.0", port=int(os.environ.get("PORT", 8080)))
