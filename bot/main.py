@@ -13,8 +13,10 @@ from dotenv import load_dotenv
 load_dotenv()
 
 API_TOKEN = os.getenv("API_TOKEN")
+# WEBHOOK_PATH = "/webhook"
+# WEBHOOK_URL = f"https://happy-heart.up.railway.app{WEBHOOK_PATH}"
 WEBHOOK_PATH = "/webhook"
-WEBHOOK_URL = f"https://happy-heart.up.railway.app{WEBHOOK_PATH}"
+WEBHOOK_URL = f"https://{os.getenv('RAILWAY_APP_URL')}{WEBHOOK_PATH}"
 
 
 # Aiogram bot va dispatcher
